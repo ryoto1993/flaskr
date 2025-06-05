@@ -212,3 +212,101 @@ input[type="submit"]:hover {
     font-size: 1.8em;
   }
 }
+
+/* Wiki styles */
+.wiki-pages {
+  list-style: none;
+  margin-top: 1em;
+}
+
+.wiki-pages li {
+  margin-bottom: 1em;
+  padding: 1em;
+  background: white;
+  border-radius: var(--border-radius);
+  border-left: 3px solid var(--primary-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wiki-pages li a {
+  font-weight: bold;
+  font-size: 1.1em;
+  flex-grow: 1;
+}
+
+.wiki-meta {
+  color: #777;
+  font-size: 0.85em;
+  margin-left: 1em;
+}
+
+.wiki-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.wiki-actions .edit-link {
+  margin-right: 1em;
+}
+
+.wiki-form {
+  background: white;
+  padding: 1.5em;
+  margin-bottom: 2em;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.wiki-form dl {
+  margin-bottom: 1em;
+}
+
+.wiki-form dt {
+  font-weight: bold;
+  margin-bottom: 0.5em;
+}
+
+.wiki-form dd {
+  margin-bottom: 1em;
+}
+
+.wiki-content {
+  background: white;
+  padding: 1.5em;
+  margin: 1em 0;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  line-height: 1.6;
+}
+
+.action-buttons {
+  margin: 1em 0;
+}
+
+.button {
+  display: inline-block;
+  background: var(--primary-color);
+  color: white;
+  padding: 0.6em 1em;
+  border-radius: var(--border-radius);
+  margin-right: 0.5em;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover {
+  background: var(--secondary-color);
+  text-decoration: none;
+}
+
+.delete-form {
+  display: inline-block;
+}
+
+.wiki-page {
+  margin-top: 1em;
+}

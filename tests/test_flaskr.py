@@ -57,6 +57,16 @@ class TestFlaskr:
             columns = [row[1] for row in cursor.fetchall()]
             expected_columns = ['id', 'title', 'text']
             assert set(columns) == set(expected_columns)
+            
+            # Check if the 'wiki_pages' table exists
+            result = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='wiki_pages'").fetchone()
+            assert result is not None
+            
+            # Check if the 'wiki_pages' table has the expected columns
+            cursor = db.execute('PRAGMA table_info(wiki_pages)')
+            columns = [row[1] for row in cursor.fetchall()]
+            expected_columns = ['id', 'title', 'content', 'created', 'updated']
+            assert set(columns) == set(expected_columns)
 
     def test_initdb_command(self):
         """
@@ -190,6 +200,175 @@ class TestFlaskr:
             
             # Should get a 401 Unauthorized response
             assert response.status_code == 401
+            
+    # Wiki tests
+    def test_show_wiki_pages(self):
+        """
+        Test the show_wiki_pages function to ensure it correctly renders the template.
+        """
+        with app.test_client() as client:
+            response = client.get('/wiki')
+            
+            # Check if the response status code is 200 (OK)
+            assert response.status_code == 200
+            
+            # Check if the response contains the expected content
+            assert b'<h2>Wiki Pages</h2>' in response.data
+            
+    def test_create_wiki_page_unauthorized(self):
+        """
+        Test that unauthorized users cannot create wiki pages.
+        """
+        with app.test_client() as client:
+            # Try to access the create page without being logged in
+            response = client.get('/wiki/create')
+            
+            # Should get a 401 Unauthorized response
+            assert response.status_code == 401
+            
+    def test_create_wiki_page(self):
+        """
+        Test creating a new wiki page.
+        """
+        with app.test_client() as client:
+            # Log in
+            client.post('/login', data={
+                'username': app.config['USERNAME'],
+                'password': app.config['PASSWORD']
+            })
+            
+            # Access the create page
+            response = client.get('/wiki/create')
+            assert response.status_code == 200
+            assert b'Create New Wiki Page' in response.data
+            
+            # Create a new wiki page
+            response = client.post('/wiki/create', data={
+                'title': 'Test Wiki Page',
+                'content': 'This is a test wiki page content.'
+            }, follow_redirects=True)
+            
+            # Check if the creation was successful
+            assert response.status_code == 200
+            assert b'New wiki page was successfully created' in response.data
+            
+            # Verify the page is in the database
+            with app.app_context():
+                db = get_db()
+                page = db.execute('SELECT * FROM wiki_pages WHERE title = ?', ['Test Wiki Page']).fetchone()
+                assert page is not None
+                assert page['content'] == 'This is a test wiki page content.'
+                
+    def test_view_wiki_page(self):
+        """
+        Test viewing a wiki page.
+        """
+        with app.test_client() as client:
+            # Log in and create a wiki page
+            client.post('/login', data={
+                'username': app.config['USERNAME'],
+                'password': app.config['PASSWORD']
+            })
+            
+            client.post('/wiki/create', data={
+                'title': 'View Test Page',
+                'content': 'This is a test wiki page for viewing.'
+            })
+            
+            # Get the page ID
+            with app.app_context():
+                db = get_db()
+                page = db.execute('SELECT id FROM wiki_pages WHERE title = ?', ['View Test Page']).fetchone()
+                page_id = page['id']
+            
+            # View the page
+            response = client.get(f'/wiki/{page_id}')
+            
+            # Check if the view is successful
+            assert response.status_code == 200
+            assert b'View Test Page' in response.data
+            assert b'This is a test wiki page for viewing.' in response.data
+            
+    def test_edit_wiki_page(self):
+        """
+        Test editing a wiki page.
+        """
+        with app.test_client() as client:
+            # Log in and create a wiki page
+            client.post('/login', data={
+                'username': app.config['USERNAME'],
+                'password': app.config['PASSWORD']
+            })
+            
+            client.post('/wiki/create', data={
+                'title': 'Edit Test Page',
+                'content': 'Original content.'
+            })
+            
+            # Get the page ID
+            with app.app_context():
+                db = get_db()
+                page = db.execute('SELECT id FROM wiki_pages WHERE title = ?', ['Edit Test Page']).fetchone()
+                page_id = page['id']
+            
+            # Access the edit page
+            response = client.get(f'/wiki/{page_id}/edit')
+            assert response.status_code == 200
+            assert b'Edit Wiki Page' in response.data
+            
+            # Edit the page
+            response = client.post(f'/wiki/{page_id}/edit', data={
+                'title': 'Updated Test Page',
+                'content': 'Updated content.'
+            }, follow_redirects=True)
+            
+            # Check if the edit was successful
+            assert response.status_code == 200
+            assert b'Wiki page was successfully updated' in response.data
+            assert b'Updated Test Page' in response.data
+            assert b'Updated content.' in response.data
+            
+            # Verify the changes in the database
+            with app.app_context():
+                db = get_db()
+                page = db.execute('SELECT * FROM wiki_pages WHERE id = ?', [page_id]).fetchone()
+                assert page['title'] == 'Updated Test Page'
+                assert page['content'] == 'Updated content.'
+                
+    def test_delete_wiki_page(self):
+        """
+        Test deleting a wiki page.
+        """
+        with app.test_client() as client:
+            # Log in and create a wiki page
+            client.post('/login', data={
+                'username': app.config['USERNAME'],
+                'password': app.config['PASSWORD']
+            })
+            
+            client.post('/wiki/create', data={
+                'title': 'Delete Test Page',
+                'content': 'This page will be deleted.'
+            })
+            
+            # Get the page ID
+            with app.app_context():
+                db = get_db()
+                page = db.execute('SELECT id FROM wiki_pages WHERE title = ?', ['Delete Test Page']).fetchone()
+                page_id = page['id']
+            
+            # Delete the page
+            response = client.post(f'/wiki/{page_id}/delete', follow_redirects=True)
+            
+            # Check if the deletion was successful
+            assert response.status_code == 200
+            assert b'Wiki page was successfully deleted' in response.data
+            
+            # Verify the page is no longer in the database
+            with app.app_context():
+                db = get_db()
+                page = db.execute('SELECT * FROM wiki_pages WHERE id = ?', [page_id]).fetchone()
+                assert page is None
 
 
 class AuthActions(object):
@@ -205,6 +384,3 @@ class AuthActions(object):
 
     def logout(self):
         return self._client.get('/logout', follow_redirects=True)
-
-
-

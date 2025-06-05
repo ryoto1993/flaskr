@@ -2,6 +2,7 @@ import os
 import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, abort, \
     render_template, flash
+from datetime import datetime
 
 app = Flask(__name__)  # create the application instance :)
 app.config.from_object(__name__)  # load config from this file , flaskr.py
@@ -107,3 +108,84 @@ def logout():
     session.pop('logged_in', None)
     flash('You were logged out')
     return redirect(url_for('show_entries'))
+
+
+# Wiki routes
+@app.route('/wiki')
+def show_wiki_pages():
+    """Show all wiki pages."""
+    db = get_db()
+    cur = db.execute('SELECT id, title, created, updated FROM wiki_pages ORDER BY title')
+    wiki_pages = cur.fetchall()
+    return render_template('wiki/index.html', wiki_pages=wiki_pages)
+
+
+@app.route('/wiki/create', methods=['GET', 'POST'])
+def create_wiki_page():
+    """Create a new wiki page."""
+    if not session.get('logged_in'):
+        abort(401)
+    
+    if request.method == 'POST':
+        if not request.form['title'] or not request.form['content']:
+            flash('Title and content are required')
+            return render_template('wiki/create.html')
+        
+        db = get_db()
+        db.execute('INSERT INTO wiki_pages (title, content) VALUES (?, ?)',
+                  [request.form['title'], request.form['content']])
+        db.commit()
+        flash('New wiki page was successfully created')
+        return redirect(url_for('show_wiki_pages'))
+    
+    return render_template('wiki/create.html')
+
+
+@app.route('/wiki/<int:page_id>')
+def view_wiki_page(page_id):
+    """View a specific wiki page."""
+    db = get_db()
+    page = db.execute('SELECT id, title, content, created, updated FROM wiki_pages WHERE id = ?',
+                     [page_id]).fetchone()
+    if page is None:
+        abort(404)
+    return render_template('wiki/view.html', page=page)
+
+
+@app.route('/wiki/<int:page_id>/edit', methods=['GET', 'POST'])
+def edit_wiki_page(page_id):
+    """Edit a wiki page."""
+    if not session.get('logged_in'):
+        abort(401)
+    
+    db = get_db()
+    page = db.execute('SELECT id, title, content FROM wiki_pages WHERE id = ?',
+                     [page_id]).fetchone()
+    if page is None:
+        abort(404)
+    
+    if request.method == 'POST':
+        if not request.form['title'] or not request.form['content']:
+            flash('Title and content are required')
+            return render_template('wiki/edit.html', page=page)
+        
+        db.execute('UPDATE wiki_pages SET title = ?, content = ?, updated = ? WHERE id = ?',
+                  [request.form['title'], request.form['content'], datetime.now(), page_id])
+        db.commit()
+        flash('Wiki page was successfully updated')
+        return redirect(url_for('view_wiki_page', page_id=page_id))
+    
+    return render_template('wiki/edit.html', page=page)
+
+
+@app.route('/wiki/<int:page_id>/delete', methods=['POST'])
+def delete_wiki_page(page_id):
+    """Delete a wiki page."""
+    if not session.get('logged_in'):
+        abort(401)
+    
+    db = get_db()
+    db.execute('DELETE FROM wiki_pages WHERE id = ?', [page_id])
+    db.commit()
+    flash('Wiki page was successfully deleted')
+    return redirect(url_for('show_wiki_pages'))

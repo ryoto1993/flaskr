@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block body %}
+  <h2>Create New Wiki Page</h2>
+  <form action="{{ url_for('create_wiki_page') }}" method="post" class="wiki-form">
+    <dl>
+      <dt>Title:
+      <dd><input type="text" name="title" required>
+      <dt>Content:
+      <dd><textarea name="content" rows="10" cols="80" required></textarea>
+      <dd><input type="submit" value="Save">
+      <dd><a href="{{ url_for('show_wiki_pages') }}" class="button">Cancel</a>
+    </dl>
+  </form>
+{% endblock %}

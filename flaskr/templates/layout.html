@@ -9,6 +9,8 @@
   {% else %}
     <a href="{{ url_for('logout') }}">log out</a>
   {% endif %}
+  <a href="{{ url_for('show_entries') }}">blog</a>
+  <a href="{{ url_for('show_wiki_pages') }}">wiki</a>
   </div>
   {% for message in get_flashed_messages() %}
     <div class=flash>{{ message }}</div>
